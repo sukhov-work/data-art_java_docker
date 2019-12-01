@@ -1,0 +1,25 @@
+FROM openjdk:11 AS build
+
+RUN ["jlink", "--compress=2", \  
+     "--module-path", "/usr/local/openjdk-11/jmods", \
+     "--add-modules", "java.desktop,java.naming,java.management,java.security.jgss,java.instrument", \
+     "--no-header-files", "--no-man-pages", \
+     "--output", "/linked"]
+
+FROM registry.access.redhat.com/ubi8/ubi-minimal
+
+COPY --from=build /linked /opt/jdk/
+
+
+
+VOLUME /tmp
+ARG DEPENDENCY=target/dependency
+COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY ${DEPENDENCY}/META-INF /app/META-INF
+COPY ${DEPENDENCY}/BOOT-INF/classes /app
+COPY ${DEPENDENCY}/module-info.class /app/module-info.class
+
+RUN ["/opt/jdk/bin/java", "-Xshare:dump"]
+
+ENTRYPOINT ["/opt/jdk/bin/java", "--module-path", "app:app/lib", "-cp", "app/lib/*", "--add-modules", "java.instrument",  "-m" , "greeting.module/hello.Application"]
+

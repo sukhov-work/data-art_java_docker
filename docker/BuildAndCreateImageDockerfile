@@ -1,0 +1,13 @@
+FROM oracle/graalvm-ce:19.2.0.1 as builder
+ARG mainclass
+COPY in /opt/cp
+WORKDIR /opt/graalvm
+RUN gu install native-image
+RUN native-image --class-path /opt/cp --static -H:Name=app ${mainclass}
+
+FROM alpine:3.9.4
+COPY --from=builder /opt/graalvm/app /opt/docker/app
+RUN chmod +x /opt/docker/app
+CMD ["opt/docker/app"]
+
+

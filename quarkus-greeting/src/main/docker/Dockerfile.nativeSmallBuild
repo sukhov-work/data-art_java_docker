@@ -1,0 +1,35 @@
+####
+# This Dockerfile is used in order to build a container that runs the Quarkus application in native (no JVM) mode
+#
+# docker run -i --rm -p 8080:8080 quarkus-greeting
+#
+###
+FROM maven:3.6.0-jdk-8-alpine as mavencache
+ENV MAVEN_OPTS=-Dmaven.repo.local=/mvn
+COPY pom.xml /mvn/
+WORKDIR /mvn
+RUN mvn test-compile dependency:resolve dependency:resolve-plugins
+
+FROM oracle/graalvm-ce:19.2.0.1 as builder
+ENV MAVEN_OPTS=-Dmaven.repo.local=/mvn
+COPY --from=mavencache /mvn/ /mvn/
+COPY . /app
+
+WORKDIR /opt/graalvm
+RUN gu install native-image
+
+ENV GRAALVM_HOME=/opt/graalvm
+
+WORKDIR /app
+RUN ./mvnw package -DskipTests=true -Pnative
+
+RUN mkdir -p /dist/work
+RUN cp /app/target/*-runner /dist/work/application
+RUN chmod 775 /dist/work
+
+FROM frolvlad/alpine-glibc
+WORKDIR /work/
+COPY --from=builder /dist /
+EXPOSE 8080
+USER 1000
+CMD ["./application", "-Dquarkus.http.host=0.0.0.0"]

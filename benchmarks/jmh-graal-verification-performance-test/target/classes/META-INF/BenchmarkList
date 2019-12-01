@@ -1,0 +1,2 @@
+JMH S 23 com.example.MyBenchmark S 60 com.example.generated.MyBenchmark_measureHashComplex_jmhTest S 18 measureHashComplex S 11 AverageTime E A 1 1 1 E I 1 1 T 3 2 s E I 1 2 T 3 2 s E E E E E E E E U 11 NANOSECONDS E E 
+JMH S 23 com.example.MyBenchmark S 59 com.example.generated.MyBenchmark_measureHashSimple_jmhTest S 17 measureHashSimple S 11 AverageTime E A 1 1 1 E I 1 1 T 3 2 s E I 1 2 T 3 2 s E E E E E E E E U 11 NANOSECONDS E E 

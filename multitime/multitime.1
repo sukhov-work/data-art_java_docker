@@ -1,0 +1,362 @@
+.\" Copyright (C)2012 Laurence Tratt http://tratt.net/laurie/
+.\"
+.\" Permission is hereby granted, free of charge, to any person obtaining a copy
+.\" of this software and associated documentation files (the "Software"), to
+.\" deal in the Software without restriction, including without limitation the
+.\" rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+.\" sell copies of the Software, and to permit persons to whom the Software is
+.\" furnished to do so, subject to the following conditions:
+.\"
+.\" The above copyright notice and this permission notice shall be included in
+.\" all copies or substantial portions of the Software.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+.\" IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+.\" FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+.\" AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+.\" LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+.\" FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+.\" IN THE SOFTWARE.
+.Dd $Mdocdate: August 31 2012 $
+.Dt MULTITIME 1
+.Os
+.Sh NAME
+.Nm multitime
+.Nd time command execution over multiple executions
+.Sh SYNOPSIS
+.Nm multitime
+.Op Fl c Ar level
+.Op Fl f Ar liketime | rusage
+.Op Fl I Ar replstr
+.Op Fl i Ar stdincmd
+.Op Fl n Ar numruns
+.Op Fl o Ar stdoutcmd
+.Op Fl q
+.Op Fl r Ar precmd
+.Op Fl s Ar sleep
+.Op Fl v
+.Ar command
+.Op arg1, ..., argn
+.Pp
+.Nm multitime
+.Fl b Ar batchfile
+.Op Fl c Ar level
+.Op Fl f Ar liketime | rusage
+.Op Fl n Ar numruns
+.Op Fl s Ar sleep
+.Op Fl v
+.Sh DESCRIPTION
+Unix's
+.Xr time 1
+utility is a simple and often effective way of measuring how long a command
+takes to execute.
+Unfortunately, executing a command once can give misleading timings: the
+process may create a cache on its first execution, running faster
+subsequently; other processes may cause the command to be starved of CPU or
+IO time; etc.
+It is common to see people execute
+.Xr time 1
+several times and take whichever values they feel most comfortable with.
+Inevitably, this causes problems.
+.Pp
+.Nm
+is, in essence, a simple extension to
+.Xr time 1
+which executes
+.Ar command
+multiple times and prints the timing means, standard deviations, mins,
+medians, and maxes having done so.
+This can give a much better understanding of the command's performance.
+.Nm
+also has a number of options to help advanced uses.
+For basic uses,
+.Nm
+can replace
+.Xr time 1
+by using the
+.Ic -n
+option to specifying how many times
+.Ar command
+should be executed.
+e.g. if we want to time
+.Xr awk 1 :
+.Pp
+.Dl $ multitime -n 5 awk 'function fib(n) \e
+.Dl    { return n <= 1 ? 1 : fib(n - 1) + fib(n - 2) } BEGIN { fib(30) }'
+.Pp
+The full set of options is as follows:
+.Bl -tag -width Ds
+.It Ic -b Ar batchfile
+Execute multiple commands from
+.Ar batchfile .
+See the
+.Sx BATCHFILES
+section for more details.
+.It Ic -c Ar level
+Report mean times with confidence intervals.
+.Ar level
+is an integer between 0 and 100 (both exclusive) representing the desired
+confidence level.
+.It Ic -f Ar liketime | rusage
+If called as
+.Nm time ,
+the default output style of
+.Nm
+is POSIX.2 compatible, showing means for real, user, and sys readings.
+.Ic -f
+.Ar liketime
+can be used to force POSIX.2 compatibility in all cases.
+Otherwise, its default output style is an incompatible extension that shows
+means, standard deviations, mins, medians, and maxes.
+.Ic -f
+.Ar rusage
+additionally shows the entire output of the rusage structure.
+.It Ic -I Ar replstr
+Instances of
+.Ar replstr
+found in
+.Ar inputcmd ,
+.Ar outputcmd ,
+and
+.Ar precmd
+are replaced with an integer denoting the current execution run number, from
+1 to
+.Ar numruns
+(both inclusive).
+.It Ic -i Ar stdincmd
+Before the timing of each execution of
+.Ar command ,
+.Ar stdincmd
+is executed and its output piped to a temporary file.
+That temporary file is then used as stdin for
+.Ar command ,
+allowing the user to ensure that each execution of
+.Ar command
+sees exactly the input on stdin expected.
+.Ar stdincmd
+is a full shell command which is passed to
+.Xr popen 3 .
+.It Ic -l
+Same as
+.Ic -f
+.Ar rusage ,
+for compatibility with
+.Xr time 1 .
+.It Ic -n Ar numruns
+Specify how many times
+.Ar command
+should be executed.
+Defaults to 1.
+.It Ic -o Ar stdoutcmd
+When executing
+.Ar command ,
+its output is piped to a temporary file.
+After execution has finished,
+.Ar stdoutcmd
+is then executed, with the temporary file being its stdin.
+If
+.Ar stdoutcmd
+returns an exit code (i.e. non-zero),
+.Nm
+stops executing.
+This can be used as a sanity check that
+.Ar command
+is executing as per expectations.
+.Ar stdoutcmd
+is a full shell command which is passed to
+.Xr popen 3 .
+This option is mutually exclusive with
+.Ic -q .
+.It Ic -p
+Same as
+.Ic -f
+.Ar liketime ,
+for compatibility with
+.Xr time 1 .
+.It Ic -r Ar precmd
+Before each execution of
+.Ar command
+-- and, if it is specified, before
+.Ar stdincmd
+--
+.Ar precmd
+is executed by calling
+.Xr system 3 .
+This can be used to set the system to a known good state.
+If
+.Ar precmd
+returns an exit code (i.e. non-zero),
+.Nm
+stops executing.
+.It Ic -q
+If specified once,
+.Ic -q
+suppresses stdout output; if specified twice,
+.Ic -qq
+suppresses both stdout and stderr. This can be useful for programs which produce
+voluminous output, which can lead to one unintentionally measuring the output
+speed of the terminal being used, rather than
+.Ar command
+itself.
+This option is mutually exclusive with
+.Ic -o .
+.It Ic -s Ar sleep
+.Nm
+pauses a random length of time between 0 and
+.Ar sleep
+seconds between each command execution.
+Particularly for short-running commands, this can smooth out temporary peaks
+and troughs.
+If not specified,
+.Ar sleep
+defaults to 3 seconds; if set to 0,
+.Nm
+does not sleep at all between executions.
+.It Ic -v
+Causes verbose output (e.g. which commands are being executed).
+.El
+.Pp
+Note that
+.Nm
+exits immediately if any execution of
+.Ar command
+fails, returning the failed commands error code.
+.Sh BATCHFILES
+Batchfiles are only needed for advanced uses of
+.Nm .
+One important use is when
+.Nm
+is being used to compare the performance of multiple commands.
+The obvious way to do this is to execute
+.Nm
+for each command and record its output.
+However, it is possible that one command is unduly affected by issues
+elsewhere in the machine (e.g. a
+.Xr cron 8
+job running in the background), distorting the comparison.
+Batchfiles allow multiple completely different commands to be executed, with
+each iteration running a random command.
+Assuming that
+.Ar numruns
+is set sufficiently high, batchfiles tend to better spread timing problems
+over the whole set of commands rather than a single command.
+.Pp
+The format of batchfiles is relatively simple being, more or less, a cut-down
+version of the normal
+.Nm
+arguments without having to specify
+.Nm
+itself.
+Each line specifies a command to be executed. Each line has the
+format:
+.Pp
+.Op Fl I Ar replstr
+.Op Fl i Ar stdincmd
+.Op Fl o Ar stdoutcmd
+.Op Fl q
+.Op Fl r Ar precmd
+.Ar command
+.Op arg1, ..., argn
+.Pp
+The
+.Ic -f ,
+.Ic -n ,
+.Ic -s ,
+and
+.Ic -v
+options are global and can not be specified in the batch file.
+.Sh EXAMPLES
+A basic invocation of
+.Nm
+is as follows:
+.Pp
+.Dl $ multitime -n 10 awk 'function fib(n) \e
+.Dl    { return n <= 1 ? 1 : fib(n - 1) + fib(n - 2) } BEGIN { fib(30) }'
+.Pp
+.Ar command
+will produce its output as normal;
+.Nm
+will then produce output such as the following on stderr:
+.Pp
+.Dl 1: awk 'function fib(n) \e
+.Dl { return n <= 1? 1: fib(n - 1) + fib(n - 2) } BEGIN { fib(30) }'
+.Bl -column "NameX" "MeanXXX" "StdDevXXX" "MinXXXX" "MedianX" "MaxXXX" -offset indent
+.It       Ta  Mean Ta Ta  Std.Dev. Min    Ta  Median  Ta  Max
+.It real  Ta  0.474+/-0.000012  Ta    0.001         Ta  0.473  Ta  0.474   Ta  0.477
+.It user  Ta  0.456+/-0.000474  Ta    0.016         Ta  0.430  Ta  0.460   Ta  0.480
+.It sys   Ta  0.000+/-0.000002  Ta    0.000         Ta  0.000  Ta  0.000   Ta  0.010
+.El
+.Pp
+As an example of more complex uses of
+.Nm ,
+one could time the overall performance of
+.Xr sort 1
+on different sequences of random data using
+.Ic -i :
+.Dl $ multitime -i 'jot -r 1000000 1 100000' -n 10 -q sort
+Note that each execution of
+.Xr sort 1
+will receive different output from
+.Xr jot 1 .
+If you want each execution to receive the same data, use a two-stage sequence with
+.Xr cat 1 :
+.Dl $ jot -r 1000000 1 100000 > file
+.Dl $ multitime -i 'cat file' -n 10 -q sort
+.Pp
+If you are timing
+.Xr sort 1
+against pre-defined batches of data (called data1, data2, ..., data10):
+.Dl $ multitime -I{} -i 'cat data{}' -n 10 -q sort
+.Pp
+If you want to cache the output of each execution of
+.Ar command
+use
+.Ic -o :
+.Dl $ multitime -I{} -n 3 -o 'cat > file{}' md5 -t
+.Pp
+An example batch file
+.Nm bf
+is as follows:
+.Dl -i 'jot -r 100000 1 100000' -q sort
+.Dl md5 -t
+and may be invoked thus:
+.Dl $ multitime -b bf -n 10
+.Sh LIMITATIONS
+Though
+.Nm
+goes out of its way not to colour timings, ultimately the operating system
+and tasks executing in the system can significantly affect timing
+measurements.
+For example,
+.Nm
+timings include the time to
+.Xr fork 2
+a process and
+.Xr execvp 3
+a command, which are entirely outside its hands.
+Short-running tasks can be
+particularly affected by seemingly minor blips in system activity.
+.Pp
+There are methods which can increase the likely accuracy of timing measurements.
+For example, raising
+.Ar numruns
+(and, depending on your circumstances,
+.Ar sleep )
+reduces the likelihood of temporary blips distorting timing measurements.
+If comparing the execution times of multiple commands, the use of batchfiles
+can spread blips out rather than concentrating them on a single command.
+Increasing the process priority of
+.Nm
+can decrease the likelihood of other tasks interfering with timings.
+Ultimately, however, there can never be absolute guarantees of accuracy.
+Instead, such methods should be thought of as increasing the likelihood that
+the numbers returned are indicative of the 'true' measurements.
+By presenting means and standard deviations,
+.Nm
+encourages the use of confidence intervals, a statistical technique which
+encourages this mode of thinking.
+.Sh AUTHORS
+.An -nosplit
+.Nm
+was written by
+.An Laurence Tratt Aq http://tratt.net/laurie/ .

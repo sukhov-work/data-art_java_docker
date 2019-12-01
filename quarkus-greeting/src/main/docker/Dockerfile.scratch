@@ -1,0 +1,8 @@
+
+# TODO - fix external folders
+FROM scratch
+
+COPY target/*-runner /work/application
+
+EXPOSE 8080
+CMD ["./application", "-Dquarkus.http.host=0.0.0.0"]

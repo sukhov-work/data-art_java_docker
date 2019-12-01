@@ -1,0 +1,103 @@
+# Copyright (C)2012 Laurence Tratt http:#tratt.net/laurie/
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
+
+AC_INIT([multitime], MULTITIME_VERSION)
+
+####################################################################################################
+# Generic initialization
+#
+
+AC_CONFIG_HEADER(Config.h)
+
+AC_LANG(C)
+
+AC_PROG_CC
+AC_PROG_CC_C99
+AC_GNU_SOURCE
+
+
+####################################################################################################
+# Function / feature checks
+#
+
+real_cflags="$CFLAGS -Wall"
+if test "$ac_cv_prog_cc_c99" != "no"
+then
+    real_cflags="$real_cflags $ac_cv_prog_cc_c99"
+fi
+LIBS="-lm"
+
+
+# fileno (Linux)
+
+case `uname -s` in
+  Linux* ) real_cflags="$real_cflags -D_POSIX_C_SOURCE=2";;
+esac
+
+
+# timerclear and friends
+
+case `uname -s` in
+  Linux* ) real_cflags="$real_cflags -D_BSD_SOURCE";;
+esac
+
+
+# arc4random
+
+AH_TEMPLATE(MT_HAVE_ARC4RANDOM,
+  [Define if your platform has the arc4random function family.])
+
+AC_CHECK_FUNC(arc4random, [AC_DEFINE(MT_HAVE_ARC4RANDOM)])
+
+
+
+# arc4random
+
+AH_TEMPLATE(MT_HAVE_DRAND48,
+  [Define if your platform has the drand48 function family.])
+
+AC_CHECK_FUNC(drand48, [AC_DEFINE(MT_HAVE_DRAND48)])
+
+
+# random
+
+AH_TEMPLATE(MT_HAVE_RANDOM,
+  [Define if your platform has the random function family.])
+
+AC_CHECK_FUNC(random, [AC_DEFINE(MT_HAVE_RANDOM)])
+
+
+# srandomdev
+
+AH_TEMPLATE(MT_HAVE_SRANDOMDEV,
+  [Define if your platform has the srandomdev function.])
+
+AC_CHECK_FUNC(srandomdev, [AC_DEFINE(MT_HAVE_SRANDOMDEV)])
+
+
+
+####################################################################################################
+# Output
+#
+
+CFLAGS=$real_cflags
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

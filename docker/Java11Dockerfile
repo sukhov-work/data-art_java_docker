@@ -1,0 +1,4 @@
+FROM openjdk:11-jre 
+RUN ["java", "-Xshare:dump"]
+COPY in/HelloNative.class HelloNative.class  
+CMD ["java", "HelloNative"]
